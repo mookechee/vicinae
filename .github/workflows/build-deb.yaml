@@ -8,7 +8,8 @@ on:
 
 jobs:
   build-deb:
-    runs-on: [self-hosted, Linux, X64, appimage]
+    # TODO: revert to [self-hosted, Linux, X64, appimage] after validation
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     env:
@@ -19,6 +20,25 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build gcc-14 g++-14 \
+            protobuf-compiler libprotobuf-dev \
+            qt6-base-dev qt6-svg-dev qt6-wayland-dev libgl1-mesa-dev \
+            libssl-dev libxml2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libsecret-1-dev libdbus-1-dev libfontconfig1-dev libfreetype6-dev \
+            libxcb-cursor-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
+            libxcb-icccm4-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-shape0-dev \
+            libxcb-xkb-dev libabsl-dev libcmark-gfm-dev libicu-dev extra-cmake-modules \
+            wayland-protocols libqalculate-dev dpkg-dev file lintian
 
       - name: Build DEB package
         run: |

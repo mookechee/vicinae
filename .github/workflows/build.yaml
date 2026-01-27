@@ -9,18 +9,19 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, Linux, X64, prod]
+    # TODO: revert to [self-hosted, Linux, X64, prod] after validation
+    runs-on: ubuntu-24.04
 
     strategy:
       max-parallel: 1
       matrix:
         compiler:
           - name: GCC
-            cc: gcc
-            cxx: g++
+            cc: gcc-14
+            cxx: g++-14
           - name: Clang
-            cc: clang
-            cxx: clang++
+            cc: clang-18
+            cxx: clang++-18
 
     name: Build (${{ matrix.compiler.name }})
 
@@ -28,12 +29,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build gcc-14 g++-14 clang-18 \
+            protobuf-compiler libprotobuf-dev \
+            qt6-base-dev qt6-svg-dev qt6-wayland-dev libgl1-mesa-dev \
+            libssl-dev libxml2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libsecret-1-dev libdbus-1-dev libfontconfig1-dev libfreetype6-dev \
+            libxcb-cursor-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
+            libxcb-icccm4-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-shape0-dev \
+            libxcb-xkb-dev libabsl-dev libcmark-gfm-dev libicu-dev extra-cmake-modules \
+            wayland-protocols libqalculate-dev
+
       - name: Configure CMake
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCMAKE_PREFIX_PATH=$Qt6_DIR -DCMAKE_C_COMPILER=${{ matrix.compiler.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }}
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTS=ON \
+            -DCMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }} \
+            -DUSE_SYSTEM_PROTOBUF=ON \
+            -DUSE_SYSTEM_ABSEIL=ON \
+            -DUSE_SYSTEM_CMARK_GFM=ON \
+            -DUSE_SYSTEM_LAYER_SHELL=OFF \
+            -DUSE_SYSTEM_QT_KEYCHAIN=OFF
 
       - name: Build
-        run: cmake --build build --parallel ${nproc}
+        run: cmake --build build --parallel $(nproc)
 
       - name: Run Tests
         run: make test 
