@@ -15,6 +15,7 @@ jobs:
       options: --cap-add SYS_ADMIN --device /dev/fuse
     env:
       INSTALL_DIR: /work/install
+      APPIMAGE_EXTRACT_AND_RUN: 1
 
     steps:
       - name: Checkout code

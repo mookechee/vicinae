@@ -18,6 +18,11 @@ override_dh_auto_build:
 override_dh_auto_install:
 	@echo "Skipping auto install - files staged by mkdeb.sh"
 
+# Preserve files staged by mkdeb.sh - only clean debhelper generated files
+override_dh_prep:
+	rm -f -- debian/vicinae.substvars
+	rm -rf -- debian/.debhelper/generated/vicinae/
+
 override_dh_shlibdeps:
 	dh_shlibdeps -l$(CURDIR)/debian/vicinae/usr/lib/vicinae
 
