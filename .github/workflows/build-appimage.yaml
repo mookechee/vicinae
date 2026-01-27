@@ -9,47 +9,22 @@ on:
 
 jobs:
   build:
-    # TODO: revert to [self-hosted, Linux, X64, appimage] after validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mookechee/vicinae-build-env:latest
+      options: --cap-add SYS_ADMIN --device /dev/fuse
     env:
-      INSTALL_DIR: ${{ github.workspace }}/install
+      INSTALL_DIR: /work/install
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            cmake ninja-build gcc-14 g++-14 \
-            protobuf-compiler libprotobuf-dev \
-            qt6-base-dev qt6-svg-dev qt6-wayland-dev libgl1-mesa-dev \
-            libssl-dev libxml2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev \
-            libsecret-1-dev libdbus-1-dev libfontconfig1-dev libfreetype6-dev \
-            libxcb-cursor-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
-            libxcb-icccm4-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-shape0-dev \
-            libxcb-xkb-dev libabsl-dev libcmark-gfm-dev libicu-dev extra-cmake-modules \
-            wayland-protocols libqalculate-dev libfuse2t64 file
-
-      - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: github-hosted-appimage
-          max-size: 500M
-
       - name: Configure CMake
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-            -DCMAKE_C_COMPILER=gcc-14 \
-            -DCMAKE_CXX_COMPILER=g++-14 \
-            -DUSE_SYSTEM_PROTOBUF=ON \
-            -DUSE_SYSTEM_ABSEIL=ON \
-            -DUSE_SYSTEM_CMARK_GFM=ON \
-            -DUSE_SYSTEM_LAYER_SHELL=OFF \
-            -DUSE_SYSTEM_QT_KEYCHAIN=OFF
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
       - name: Build
         run: cmake --build build --parallel $(nproc)
@@ -62,3 +37,9 @@ jobs:
           chmod +x ./scripts/mkappimage.sh
           ./scripts/mkappimage.sh "${INSTALL_DIR}" AppDir
 
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vicinae-appimage
+          path: "*.AppImage"
+          retention-days: 7

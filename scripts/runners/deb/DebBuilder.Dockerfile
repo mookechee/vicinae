@@ -2,7 +2,7 @@
 # Based on the same Ubuntu 22.04 + custom GCC/Qt stack as the AppImage builder,
 # but with additional Debian packaging tools.
 
-FROM vicinae/appimage-build-env AS base
+FROM ghcr.io/mookechee/vicinae-build-env:latest AS base
 
 # Install Debian packaging tools
 RUN apt-get update && apt-get install -y \
