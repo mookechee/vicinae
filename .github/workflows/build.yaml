@@ -13,36 +13,15 @@ jobs:
     container:
       image: ghcr.io/mookechee/vicinae-build-env:latest
 
-    strategy:
-      max-parallel: 1
-      matrix:
-        compiler:
-          - name: GCC
-            cc: /opt/gcc/bin/gcc
-            cxx: /opt/gcc/bin/g++
-          - name: Clang
-            cc: clang-18
-            cxx: clang++-18
-
-    name: Build (${{ matrix.compiler.name }})
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install Clang (if needed)
-        if: matrix.compiler.name == 'Clang'
-        run: |
-          apt-get update
-          apt-get install -y clang-18
 
       - name: Configure CMake
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTS=OFF \
-            -DCMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
-            -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }}
+            -DBUILD_TESTS=OFF
 
       - name: Build
         run: cmake --build build --parallel $(nproc)

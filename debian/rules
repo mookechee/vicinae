@@ -23,6 +23,10 @@ override_dh_prep:
 	rm -f -- debian/vicinae.substvars
 	rm -rf -- debian/.debhelper/generated/vicinae/
 
+# Skip dh_install - files already in debian/vicinae from mkdeb.sh
+override_dh_install:
+	@echo "Skipping dh_install - files already staged by mkdeb.sh"
+
 override_dh_shlibdeps:
 	dh_shlibdeps -l$(CURDIR)/debian/vicinae/usr/lib/vicinae
 
