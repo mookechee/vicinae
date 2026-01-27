@@ -1,0 +1,37 @@
+Source: vicinae
+Section: utils
+Priority: optional
+Maintainer: Vicinae Team <contact@vicinae.com>
+Build-Depends: debhelper (>= 13)
+Standards-Version: 4.6.2
+Homepage: https://vicinae.com
+Rules-Requires-Root: no
+
+Package: vicinae
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    libwayland-client0,
+    libxkbcommon0,
+    libxkbcommon-x11-0,
+    libgl1,
+    libssl3t64 | libssl3,
+    libxml2,
+    libsecret-1-0,
+    libdbus-1-3,
+    libfontconfig1,
+    libfreetype6,
+    libwayland-egl1,
+    libxcb1,
+    libxcb-cursor0,
+    libxcb-keysyms1,
+    libxcb-image0,
+    libxcb-shm0,
+    libxcb-icccm4,
+    libxcb-randr0,
+    libxcb-render-util0,
+    libxcb-shape0,
+    libxcb-xkb1
+Description: A focused launcher for your desktop
+ Vicinae is a native, fast, and extensible desktop launcher for Linux.
+ It supports Wayland and X11, and provides a plugin system built on
+ Node.js and TypeScript for creating custom extensions.

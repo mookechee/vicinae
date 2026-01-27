@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+
+# The actual build is handled by mkdeb.sh which runs inside Docker.
+# This rules file is used by dpkg-buildpackage to assemble the .deb
+# from pre-built binaries.
+
+export DH_VERBOSE = 1
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	@echo "Skipping configure - build handled externally"
+
+override_dh_auto_build:
+	@echo "Skipping build - build handled externally"
+
+override_dh_auto_install:
+	@echo "Skipping auto install - files staged by mkdeb.sh"
+
+override_dh_shlibdeps:
+	dh_shlibdeps -l$(CURDIR)/debian/vicinae/usr/lib/vicinae
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
+
+# Skip tests as they are run during the build step
+override_dh_auto_test:
+	@echo "Skipping tests - run during build step"
