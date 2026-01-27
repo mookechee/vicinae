@@ -3,6 +3,8 @@ RM								:= rm
 TAG 							:= $(shell git describe --tags --abbrev=0)
 APPIMAGE_BUILD_ENV_DIR			:= ./scripts/runners/appimage/
 APPIMAGE_BUILD_ENV_IMAGE_TAG	:= vicinae/appimage-build-env
+DEB_BUILD_ENV_DIR				:= ./scripts/runners/deb/
+DEB_BUILD_ENV_IMAGE_TAG			:= vicinae/deb-build-env
 
 release:
 	cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B $(BUILD_DIR)
@@ -65,6 +67,18 @@ appimage-build-env:
 appimage-build-gh-runner: appimage-build-env
 	docker build -f $(APPIMAGE_BUILD_ENV_DIR)/gh-runner.Dockerfile $(APPIMAGE_BUILD_ENV_DIR) -t vicinae/appimage-gh-runner
 .PHONY: appimage-build-gh-runner
+
+deb-build-env:
+	docker build -f $(DEB_BUILD_ENV_DIR)/DebBuilder.Dockerfile $(DEB_BUILD_ENV_DIR) -t $(DEB_BUILD_ENV_IMAGE_TAG)
+.PHONY: deb-build-env
+
+deb-build-env-run:
+	docker run -v$(PWD):/work -it $(DEB_BUILD_ENV_IMAGE_TAG)
+.PHONY: deb-build-env-run
+
+deb:
+	docker run -v$(PWD):/work $(DEB_BUILD_ENV_IMAGE_TAG) ./scripts/mkdeb.sh
+.PHONY: deb
 
 format:
 	@echo -e 'vicinae\nwlr-clip' | xargs -I{} find {} -type d -iname 'build' -prune -o -type f -iname '*.hpp' -o -type f -iname '*.cpp' | xargs -I{} bash -c '[ -f {} ] && clang-format -i {} && echo "Formatted {}" || echo "Failed to format {}"'

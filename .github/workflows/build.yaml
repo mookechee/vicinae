@@ -9,18 +9,20 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, Linux, X64, prod]
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mookechee/vicinae-build-env:latest
 
     strategy:
       max-parallel: 1
       matrix:
         compiler:
           - name: GCC
-            cc: gcc
-            cxx: g++
+            cc: /opt/gcc/bin/gcc
+            cxx: /opt/gcc/bin/g++
           - name: Clang
-            cc: clang
-            cxx: clang++
+            cc: clang-18
+            cxx: clang++-18
 
     name: Build (${{ matrix.compiler.name }})
 
@@ -28,12 +30,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Clang (if needed)
+        if: matrix.compiler.name == 'Clang'
+        run: |
+          apt-get update
+          apt-get install -y clang-18
+
       - name: Configure CMake
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCMAKE_PREFIX_PATH=$Qt6_DIR -DCMAKE_C_COMPILER=${{ matrix.compiler.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }}
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTS=ON \
+            -DCMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }}
 
       - name: Build
-        run: cmake --build build --parallel ${nproc}
+        run: cmake --build build --parallel $(nproc)
 
       - name: Run Tests
-        run: make test 
+        run: ctest --test-dir build --output-on-failure

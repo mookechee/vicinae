@@ -1,0 +1,9 @@
+# Suppress warnings for bundled libraries
+vicinae: embedded-library usr/lib/vicinae/libQt6*.so*
+vicinae: hardening-no-pie usr/bin/vicinae
+vicinae: hardening-no-pie usr/bin/node
+vicinae: library-not-linked-against-libc usr/lib/vicinae/libQt6*.so*
+vicinae: shared-library-lacks-prerequisites usr/lib/vicinae/libQt6*.so*
+vicinae: package-name-doesnt-match-sonames
+vicinae: binary-without-manpage usr/bin/vicinae
+vicinae: binary-without-manpage usr/bin/node

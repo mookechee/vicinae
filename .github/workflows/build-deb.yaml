@@ -1,0 +1,36 @@
+name: Build DEB Package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mookechee/vicinae-deb-env:latest
+    permissions:
+      contents: read
+    env:
+      BUILD_TYPE: Release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build DEB package
+        run: |
+          chmod +x ./scripts/mkdeb.sh ./scripts/bundle-qt-libs.sh
+          ./scripts/mkdeb.sh
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vicinae-deb
+          path: vicinae_*.deb
+          retention-days: 7

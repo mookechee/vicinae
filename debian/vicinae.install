@@ -1,0 +1,8 @@
+usr/bin/vicinae
+usr/bin/node
+usr/lib/vicinae/
+usr/share/applications/vicinae.desktop
+usr/share/applications/vicinae-url-handler.desktop
+usr/share/icons/hicolor/512x512/apps/vicinae.png
+usr/share/vicinae/
+usr/lib/systemd/user/vicinae.service
