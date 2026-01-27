@@ -9,6 +9,10 @@ export DH_VERBOSE = 1
 %:
 	dh $@
 
+# Preserve debian/vicinae during clean - files are staged by mkdeb.sh
+override_dh_clean:
+	dh_clean -Xdebian/vicinae
+
 override_dh_auto_configure:
 	@echo "Skipping configure - build handled externally"
 
