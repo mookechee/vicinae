@@ -21,6 +21,9 @@ Build-Depends: debhelper-compat (= 13),
                libxml2-dev,
                libxkbcommon-dev,
                libwayland-dev,
+               qtkeychain-qt6-dev,
+               libminizip-dev,
+               libicu-dev,
                nodejs (>= 18)
 Standards-Version: 4.6.2
 Homepage: https://github.com/nicola02nb/Vicinae
