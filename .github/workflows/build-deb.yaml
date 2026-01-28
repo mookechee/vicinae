@@ -3,6 +3,7 @@ name: Build DEB
 on:
   push:
     branches: [main, feature/deb-packaging]
+    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -13,90 +14,112 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/deb-builder
+  IMAGE_PREFIX: ${{ github.repository_owner }}/vicinae-builder
 
 jobs:
-  build-image:
-    runs-on: ubuntu-latest
-    # Only run on push events or PRs from the same repo (not forks)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      image: ${{ steps.image.outputs.image }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Calculate Dockerfile hash
-        id: hash
-        run: echo "hash=$(sha256sum scripts/runners/deb/Dockerfile | cut -c1-12)" >> $GITHUB_OUTPUT
-
-      - name: Check if image exists
-        id: check
-        run: |
-          if docker manifest inspect "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.hash.outputs.hash }}" > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build and push
-        if: steps.check.outputs.exists == 'false'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: scripts/runners/deb/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.hash.outputs.hash }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Output image reference
-        id: image
-        run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.hash.outputs.hash }}" >> $GITHUB_OUTPUT
-
   build-deb:
-    needs: build-image
     runs-on: ubuntu-latest
-    container:
-      image: ${{ needs.build-image.outputs.image }}
-      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [ubuntu2204, ubuntu2404, debian12]
+        arch: [amd64, arm64]
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configure git safe directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Set up QEMU
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
 
-      - uses: actions/cache@v4
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
-          path: /ccache
-          key: deb-ccache-${{ github.sha }}
-          restore-keys: deb-ccache-
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build DEB
+      - name: Get distro display name
+        id: distro
         run: |
-          chmod +x ./scripts/mkdeb.sh
-          ./scripts/mkdeb.sh
-        env:
-          CCACHE_DIR: /ccache
+          case "${{ matrix.distro }}" in
+            ubuntu2204) echo "name=ubuntu22.04" >> $GITHUB_OUTPUT ;;
+            ubuntu2404) echo "name=ubuntu24.04" >> $GITHUB_OUTPUT ;;
+            debian12)   echo "name=debian12" >> $GITHUB_OUTPUT ;;
+          esac
 
-      - uses: actions/upload-artifact@v4
+      - name: Build DEB package
+        run: |
+          docker run --rm --platform linux/${{ matrix.arch }} \
+            -v ${{ github.workspace }}:/work \
+            -w /work \
+            -e CCACHE_DIR=/ccache \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }} \
+            -c "chmod +x ./scripts/mkdeb.sh && ./scripts/mkdeb.sh"
+
+      - name: Rename artifact
+        run: |
+          mkdir -p dist
+          for f in *.deb; do
+            [ -f "$f" ] && mv "$f" "dist/${f%.deb}-${{ steps.distro.outputs.name }}.deb"
+          done
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: vicinae-deb
-          path: vicinae_*.deb
+          name: vicinae-deb-${{ matrix.arch }}-${{ steps.distro.outputs.name }}
+          path: dist/*.deb
           if-no-files-found: error
+
+  test-installation:
+    needs: build-deb
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: ubuntu:22.04
+            artifact: amd64-ubuntu22.04
+          - target: ubuntu:24.04
+            artifact: amd64-ubuntu24.04
+          - target: debian:12
+            artifact: amd64-debian12
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: vicinae-deb-${{ matrix.artifact }}
+          path: deb/
+
+      - name: Test installation
+        run: |
+          docker run --rm -v $PWD/deb:/deb ${{ matrix.target }} bash -c "
+            apt-get update
+            apt-get install -y /deb/*.deb
+            echo '=== ldd output ==='
+            ldd /usr/bin/vicinae || true
+            echo '=== version ==='
+            /usr/bin/vicinae --version || echo 'Requires display'
+          "
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-deb, test-installation]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          pattern: vicinae-deb-*
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.deb
+          generate_release_notes: true
