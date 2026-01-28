@@ -31,15 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # ===== OpenGL (required by Qt6Gui) =====
     libgl-dev \
     libegl-dev \
-    # ===== Protobuf and Abseil =====
-    libprotobuf-dev \
-    protobuf-compiler \
-    libabsl-dev \
-    # ===== cmark-gfm (GitHub Flavored Markdown) =====
-    libcmark-gfm-dev \
-    libcmark-gfm-extensions-dev \
-    # ===== Qt Keychain (secret storage) =====
-    qtkeychain-qt6-dev \
+    # ===== Secret storage (for Qt Keychain) =====
     libsecret-1-dev \
     # ===== Wayland =====
     libwayland-dev \
