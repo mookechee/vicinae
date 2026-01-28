@@ -20,15 +20,12 @@ jobs:
         include:
           - distro: ubuntu2204
             dockerfile: Dockerfile.ubuntu2204
-            base_image: ""
             platforms: linux/amd64,linux/arm64
           - distro: ubuntu2404
-            dockerfile: Dockerfile
-            base_image: ubuntu:24.04
+            dockerfile: Dockerfile.ubuntu2404
             platforms: linux/amd64,linux/arm64
           - distro: debian12
-            dockerfile: Dockerfile
-            base_image: debian:12
+            dockerfile: Dockerfile.debian12
             platforms: linux/amd64,linux/arm64
 
     permissions:
@@ -59,8 +56,5 @@ jobs:
           platforms: ${{ matrix.platforms }}
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }}
-          build-args: |
-            BASE_IMAGE=${{ matrix.base_image }}
-            DISTRO_ID=${{ matrix.distro }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
