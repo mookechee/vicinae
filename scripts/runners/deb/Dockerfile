@@ -10,7 +10,6 @@ ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
 # Install all build dependencies
-# Matches debian/control Build-Depends + additional tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # ===== Basic build tools =====
     build-essential \
@@ -29,6 +28,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     qt6-wayland-dev \
     libqt6svg6-dev \
     libqt6sql6-sqlite \
+    # ===== OpenGL (required by Qt6Gui) =====
+    libgl-dev \
+    libegl-dev \
     # ===== Protobuf and Abseil =====
     libprotobuf-dev \
     protobuf-compiler \
@@ -39,12 +41,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # ===== Qt Keychain (secret storage) =====
     qtkeychain-qt6-dev \
     libsecret-1-dev \
+    # ===== Wayland =====
+    libwayland-dev \
+    wayland-protocols \
+    # ===== X11/XCB =====
+    libx11-dev \
+    libxcb1-dev \
+    libxkbcommon-dev \
     # ===== Other libraries =====
     libqalculate-dev \
     libssl-dev \
     libxml2-dev \
-    libxkbcommon-dev \
-    libwayland-dev \
     libminizip-dev \
     libicu-dev \
     # ===== Node.js =====
