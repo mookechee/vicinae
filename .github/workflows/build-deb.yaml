@@ -17,7 +17,71 @@ env:
   IMAGE_PREFIX: ${{ github.repository_owner }}/vicinae-builder
 
 jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu2204
+            dockerfile: Dockerfile.ubuntu2204
+            base_image: ""
+          - distro: ubuntu2404
+            dockerfile: Dockerfile
+            base_image: ubuntu:24.04
+          - distro: debian12
+            dockerfile: Dockerfile
+            base_image: debian:12
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if image exists
+        id: check
+        run: |
+          if docker manifest inspect "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }}" > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: scripts/runners/deb
+          file: scripts/runners/deb/${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }}
+          build-args: |
+            BASE_IMAGE=${{ matrix.base_image }}
+            DISTRO_ID=${{ matrix.distro }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   build-deb:
+    needs: build-images
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
