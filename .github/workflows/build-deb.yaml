@@ -2,7 +2,7 @@ name: Build DEB
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/deb-packaging]
   pull_request:
     branches: [main]
   workflow_dispatch:
