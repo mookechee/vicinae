@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # ===== Qt6 development libraries =====
     qt6-base-dev \
     qt6-wayland-dev \
-    qt6-svg-dev \
+    libqt6svg6-dev \
     libqt6sql6-sqlite \
     # ===== Protobuf and Abseil =====
     libprotobuf-dev \
