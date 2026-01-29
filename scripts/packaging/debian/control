@@ -30,7 +30,7 @@ Homepage: https://github.com/nicola02nb/Vicinae
 Rules-Requires-Root: no
 
 Package: vicinae
-Architecture: amd64
+Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          libsecret-1-0,
