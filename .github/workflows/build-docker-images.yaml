@@ -18,9 +18,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro: ubuntu2204
-            dockerfile: Dockerfile.ubuntu2204
-            platforms: linux/amd64,linux/arm64
           - distro: ubuntu2404
             dockerfile: Dockerfile.ubuntu2404
             platforms: linux/amd64,linux/arm64

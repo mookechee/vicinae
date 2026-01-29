@@ -23,8 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro: ubuntu2204
-            dockerfile: Dockerfile.ubuntu2204
           - distro: ubuntu2404
             dockerfile: Dockerfile.ubuntu2404
           - distro: debian12
@@ -80,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: [ubuntu2204, ubuntu2404, debian12]
+        distro: [ubuntu2404, debian12]
         arch: [amd64, arm64]
 
     steps:
@@ -103,7 +101,6 @@ jobs:
         id: distro
         run: |
           case "${{ matrix.distro }}" in
-            ubuntu2204) echo "name=ubuntu22.04" >> $GITHUB_OUTPUT ;;
             ubuntu2404) echo "name=ubuntu24.04" >> $GITHUB_OUTPUT ;;
             debian12)   echo "name=debian12" >> $GITHUB_OUTPUT ;;
           esac
@@ -138,8 +135,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: ubuntu:22.04
-            artifact: amd64-ubuntu22.04
           - target: ubuntu:24.04
             artifact: amd64-ubuntu24.04
           - target: debian:12

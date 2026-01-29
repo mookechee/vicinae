@@ -22,8 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fakeroot \
     git \
     ca-certificates \
+    wget \
     # ===== CMake and build system =====
-    cmake \
     ninja-build \
     pkg-config \
     # ===== Qt6 development libraries =====
@@ -64,6 +64,19 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
 
 ENV CC=gcc-14
 ENV CXX=g++-14
+
+# Install CMake 3.30.5 (required for C++26 support)
+ARG TARGETARCH
+RUN CMAKE_VERSION="3.30.5" && \
+    case "${TARGETARCH}" in \
+        amd64) CMAKE_ARCH="x86_64" ;; \
+        arm64) CMAKE_ARCH="aarch64" ;; \
+        *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget -q "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-${CMAKE_ARCH}.tar.gz" -O /tmp/cmake.tar.gz && \
+    tar -xzf /tmp/cmake.tar.gz -C /usr/local --strip-components=1 && \
+    rm /tmp/cmake.tar.gz && \
+    cmake --version
 
 # Configure ccache
 ENV PATH="/usr/lib/ccache:${PATH}"
