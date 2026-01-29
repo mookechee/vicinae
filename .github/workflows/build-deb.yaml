@@ -35,10 +35,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Compute Dockerfile hash
+        id: hash
+        run: |
+          HASH=$(sha256sum "scripts/runners/deb/${{ matrix.dockerfile }}" | cut -c1-8)
+          echo "short=$HASH" >> $GITHUB_OUTPUT
+
+      - name: Set image tag
+        id: meta
+        run: |
+          TAG="${{ matrix.distro }}-${{ steps.hash.outputs.short }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check if image exists
         id: check
         run: |
-          if docker manifest inspect "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }}" > /dev/null 2>&1; then
+          if docker manifest inspect "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ steps.meta.outputs.tag }}" > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -52,14 +71,6 @@ jobs:
         if: steps.check.outputs.exists == 'false'
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to GHCR
-        if: steps.check.outputs.exists == 'false'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push
         if: steps.check.outputs.exists == 'false'
         uses: docker/build-push-action@v6
@@ -68,7 +79,9 @@ jobs:
           file: scripts/runners/deb/${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -103,7 +116,14 @@ jobs:
           case "${{ matrix.distro }}" in
             ubuntu2404) echo "name=ubuntu24.04" >> $GITHUB_OUTPUT ;;
             debian12)   echo "name=debian12" >> $GITHUB_OUTPUT ;;
+            *)          echo "Unknown distro: ${{ matrix.distro }}" && exit 1 ;;
           esac
+
+      - name: Compute Dockerfile hash
+        id: hash
+        run: |
+          HASH=$(sha256sum "scripts/runners/deb/Dockerfile.${{ matrix.distro }}" | cut -c1-8)
+          echo "short=$HASH" >> $GITHUB_OUTPUT
 
       - name: Build DEB package
         run: |
@@ -111,7 +131,7 @@ jobs:
             -v ${{ github.workspace }}:/work \
             -w /work \
             -e CCACHE_DIR=/ccache \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }}-${{ steps.hash.outputs.short }} \
             -c "chmod +x ./scripts/mkdeb.sh && ./scripts/mkdeb.sh"
 
       - name: Rename artifact
