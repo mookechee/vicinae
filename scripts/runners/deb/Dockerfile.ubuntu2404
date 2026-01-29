@@ -1,0 +1,88 @@
+# Build environment for Vicinae DEB packages
+# Ubuntu 24.04 - has GCC 14 in system repositories
+FROM ubuntu:24.04
+
+LABEL maintainer="Vicinae Developers <dev@vicinae.org>"
+LABEL description="Build environment for Vicinae DEB packages (Ubuntu 24.04)"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# Install GCC 14 from system repositories
+RUN apt-get update && apt-get install -y gcc-14 g++-14
+
+# Install all build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # ===== Basic build tools =====
+    build-essential \
+    devscripts \
+    debhelper \
+    lintian \
+    fakeroot \
+    git \
+    ca-certificates \
+    wget \
+    # ===== CMake and build system =====
+    ninja-build \
+    pkg-config \
+    # ===== Qt6 development libraries =====
+    qt6-base-dev \
+    qt6-wayland-dev \
+    libqt6svg6-dev \
+    libqt6sql6-sqlite \
+    # ===== OpenGL (required by Qt6Gui) =====
+    libgl-dev \
+    libegl-dev \
+    # ===== Secret storage (for Qt Keychain) =====
+    libsecret-1-dev \
+    # ===== Wayland =====
+    libwayland-dev \
+    wayland-protocols \
+    # ===== X11/XCB =====
+    libx11-dev \
+    libxcb1-dev \
+    libxkbcommon-dev \
+    # ===== Other libraries =====
+    libqalculate-dev \
+    libssl-dev \
+    libxml2-dev \
+    libminizip-dev \
+    libicu-dev \
+    # ===== Node.js =====
+    nodejs \
+    npm \
+    # ===== Build acceleration =====
+    ccache \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set GCC 14 as default compiler
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
+        --slave /usr/bin/g++ g++ /usr/bin/g++-14 && \
+    update-alternatives --set gcc /usr/bin/gcc-14
+
+ENV CC=gcc-14
+ENV CXX=g++-14
+
+# Install CMake 3.30.5 (required for C++26 support)
+ARG TARGETARCH
+RUN CMAKE_VERSION="3.30.5" && \
+    case "${TARGETARCH}" in \
+        amd64) CMAKE_ARCH="x86_64" ;; \
+        arm64) CMAKE_ARCH="aarch64" ;; \
+        *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget -q "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-${CMAKE_ARCH}.tar.gz" -O /tmp/cmake.tar.gz && \
+    tar -xzf /tmp/cmake.tar.gz -C /usr/local --strip-components=1 && \
+    rm /tmp/cmake.tar.gz && \
+    cmake --version
+
+# Configure ccache
+ENV PATH="/usr/lib/ccache:${PATH}"
+ENV CCACHE_DIR="/ccache"
+ENV CCACHE_MAXSIZE="2G"
+
+WORKDIR /work
+
+CMD ["/bin/bash"]

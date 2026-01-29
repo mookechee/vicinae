@@ -1,0 +1,103 @@
+# Vicinae DEB build environment for Debian 12
+# Source-compiled GCC 14 required - apt from Sid causes libgmp/libmpfr conflicts
+# GCC version pinned; update GCC_VERSION ARG as needed
+FROM debian:12
+
+LABEL maintainer="Vicinae Developers <dev@vicinae.org>"
+LABEL description="Build environment for Vicinae DEB packages (Debian 12)"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# GCC 14 build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    wget \
+    flex \
+    bison \
+    libgmp-dev \
+    libmpfr-dev \
+    libmpc-dev \
+    texinfo \
+    && rm -rf /var/lib/apt/lists/*
+
+# Compile GCC 14 (~30-60 min, cached in image)
+ARG GCC_VERSION=14.2.0
+RUN cd /tmp && \
+    wget -q "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz" && \
+    tar xf "gcc-${GCC_VERSION}.tar.gz" && \
+    cd "gcc-${GCC_VERSION}" && \
+    mkdir build && cd build && \
+    ../configure --prefix=/opt/gcc-14 \
+        --enable-languages=c,c++ \
+        --disable-multilib \
+        --disable-bootstrap && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /tmp/gcc-${GCC_VERSION}*
+
+# GCC 14 environment
+ENV PATH="/opt/gcc-14/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/gcc-14/lib64"
+ENV CC=/opt/gcc-14/bin/gcc
+ENV CXX=/opt/gcc-14/bin/g++
+
+# Build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build tools
+    devscripts \
+    debhelper \
+    lintian \
+    fakeroot \
+    git \
+    # CMake/build system
+    ninja-build \
+    pkg-config \
+    # Qt6
+    qt6-base-dev \
+    qt6-wayland-dev \
+    libqt6svg6-dev \
+    libqt6sql6-sqlite \
+    # OpenGL
+    libgl-dev \
+    libegl-dev \
+    # Secret storage
+    libsecret-1-dev \
+    # Wayland
+    libwayland-dev \
+    wayland-protocols \
+    # X11/XCB
+    libx11-dev \
+    libxcb1-dev \
+    libxkbcommon-dev \
+    # Other libs
+    libqalculate-dev \
+    libssl-dev \
+    libxml2-dev \
+    libminizip-dev \
+    libicu-dev \
+    # Node.js
+    nodejs \
+    npm \
+    # Build acceleration
+    ccache \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# CMake 3.30.5 (C++26 support)
+RUN CMAKE_VERSION="3.30.5" && \
+    wget -q "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" -O /tmp/cmake.tar.gz && \
+    tar -xzf /tmp/cmake.tar.gz -C /usr/local --strip-components=1 && \
+    rm /tmp/cmake.tar.gz && \
+    cmake --version
+
+# ccache config
+ENV PATH="/usr/lib/ccache:${PATH}"
+ENV CCACHE_DIR="/ccache"
+ENV CCACHE_MAXSIZE="2G"
+
+WORKDIR /work
+
+CMD ["/bin/bash"]

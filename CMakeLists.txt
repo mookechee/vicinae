@@ -119,7 +119,7 @@ if (NOT USE_SYSTEM_QT_KEYCHAIN)
 	checkout_qt_keychain()
 endif()
 
-if (NOT USE_SYSTEM_LAYER_SHELL)
+if (WAYLAND_LAYER_SHELL AND NOT USE_SYSTEM_LAYER_SHELL)
 	include(QtLayerShell)
 	checkout_layer_shell_qt()
 endif()

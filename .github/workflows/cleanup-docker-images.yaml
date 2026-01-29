@@ -1,0 +1,52 @@
+name: Cleanup Docker Images
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Weekly at 03:00 UTC on Sunday
+  workflow_dispatch:
+
+env:
+  KEEP_DAYS: 30
+  KEEP_TAGS: 'ubuntu2404|debian12'  # Base tags without hash
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Delete images older than ${{ env.KEEP_DAYS }} days
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CUTOFF=$(date -d "-$KEEP_DAYS days" +%s)
+          OWNER="${{ github.repository_owner }}"
+          PACKAGE="vicinae-builder"
+
+          echo "Cleaning up images older than $KEEP_DAYS days (before $(date -d @$CUTOFF))"
+
+          # Get all versions
+          gh api --paginate \
+            "/users/$OWNER/packages/container/$PACKAGE/versions" \
+            --jq '.[] | select(.metadata.container.tags | length > 0) | {id, tags: .metadata.container.tags, updated: .updated_at}' |
+          while read -r version; do
+            ID=$(echo "$version" | jq -r '.id')
+            TAGS=$(echo "$version" | jq -r '.tags | join(",")')
+            UPDATED=$(echo "$version" | jq -r '.updated')
+            UPDATED_TS=$(date -d "$UPDATED" +%s)
+
+            # Skip protected tags
+            if echo "$TAGS" | tr ',' '\n' | grep -qE "^($KEEP_TAGS)$"; then
+              echo "Keeping protected tag: $TAGS"
+              continue
+            fi
+
+            # Delete versions older than KEEP_DAYS
+            if [ "$UPDATED_TS" -lt "$CUTOFF" ]; then
+              echo "Deleting: $TAGS (updated: $UPDATED)"
+              gh api --method DELETE "/users/$OWNER/packages/container/$PACKAGE/versions/$ID" || true
+            fi
+          done
+
+          echo "Cleanup complete"

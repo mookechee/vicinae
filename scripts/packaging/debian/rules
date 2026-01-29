@@ -1,0 +1,34 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+# Override buildsystem to use cmake directly, bypassing project's Makefile
+export DEB_BUILD_OPTIONS = parallel=$(shell nproc)
+
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		-G Ninja \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DFETCHCONTENT_FULLY_DISCONNECTED=OFF \
+		-DVICINAE_PROVENANCE=deb \
+		-DUSE_SYSTEM_PROTOBUF=OFF \
+		-DUSE_SYSTEM_ABSEIL=OFF \
+		-DUSE_SYSTEM_CMARK_GFM=OFF \
+		-DUSE_SYSTEM_QT_KEYCHAIN=OFF \
+		-DWAYLAND_LAYER_SHELL=OFF \
+		-DINSTALL_BROWSER_NATIVE_HOST=ON \
+		-DLTO=OFF
+
+override_dh_auto_build:
+	dh_auto_build -- -j$$(nproc)
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
+
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
