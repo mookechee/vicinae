@@ -37,7 +37,7 @@ jobs:
             UPDATED_TS=$(date -d "$UPDATED" +%s)
 
             # 跳过受保护的 tag
-            if echo "$TAGS" | grep -qE "^($KEEP_TAGS)$"; then
+            if echo "$TAGS" | tr ',' '\n' | grep -qE "^($KEEP_TAGS)$"; then
               echo "Keeping protected tag: $TAGS"
               continue
             fi

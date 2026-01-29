@@ -88,6 +88,9 @@ jobs:
   build-deb:
     needs: build-images
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -132,7 +135,7 @@ jobs:
             -w /work \
             -e CCACHE_DIR=/ccache \
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}:${{ matrix.distro }}-${{ steps.hash.outputs.short }} \
-            -c "chmod +x ./scripts/mkdeb.sh && ./scripts/mkdeb.sh"
+            /bin/bash -c "chmod +x ./scripts/mkdeb.sh && ./scripts/mkdeb.sh"
 
       - name: Rename artifact
         run: |
